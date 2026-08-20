@@ -16,13 +16,13 @@ interface Chat {
 
 const STORAGE_KEY = 'brew-chats-v1'
 
-const INTRO = `Hi, I'm Brew! A warm cup of answers, ready when you are. Ask me anything.`
+const INTRO = `Hi, I'm viYa! A smart AI assistant, ready when you are. Ask me anything.`
 
 const FALLBACK = `I couldn't reach the AI service. Make sure VITE_GROQ_API_KEY is set in .env.local.`
 
 const SUGGESTIONS = ['Tell me a joke', 'What can you do?', 'Give me a quote', 'How are you today?']
 
-const SYSTEM_PROMPT = `You are Brew, a warm, friendly assistant. Always structure your answers in 4 clear parts:
+const SYSTEM_PROMPT = `You are viYa, a smart, friendly assistant. Always structure your answers in 4 clear parts:
 
 1. Heading — Begin with a short bold title on its own line that captures the reply, wrapped in ** like this: **Quick answer**.
 2. Direct Answer — Lead with the main point in 1-2 short sentences.
@@ -41,7 +41,14 @@ function loadChats(): Chat[] {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? (parsed as Chat[]) : []
+    const list = Array.isArray(parsed) ? (parsed as Chat[]) : []
+    return list.map((c) => {
+      if (!c.title || c.title === 'New chat') {
+        const firstUser = (c.messages ?? []).find((m) => m.role === 'user')
+        if (firstUser) return { ...c, title: generateTitle(firstUser.text) }
+      }
+      return c
+    })
   } catch {
     return []
   }
@@ -49,6 +56,123 @@ function loadChats(): Chat[] {
 
 function makeId(): number {
   return Date.now() + Math.floor(Math.random() * 10000)
+}
+
+interface BrandIconProps {
+  size?: number
+}
+
+function BrandIcon({ size = 24 }: BrandIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <path
+        d="M9 6a6 6 0 0 0-6 6v17a6 6 0 0 0 6 6h7.5v7.2a1.4 1.4 0 0 0 2.4 1l8.6-8.2H39a6 6 0 0 0 6-6V12a6 6 0 0 0-6-6H9Z"
+        fill="currentColor"
+      />
+      <path d="M24 15.5l2 4.3 4.3 2-4.3 2-2 4.3-2-4.3-4.3-2 4.3-2 2-4.3Z" fill="var(--gold)" />
+      <circle cx="40" cy="8" r="2.4" fill="currentColor" opacity="0.85" />
+      <circle cx="43" cy="17" r="1.6" fill="var(--gold)" opacity="0.75" />
+      <path d="M39.4 10.2l2.4 4.4" stroke="currentColor" strokeWidth="1.4" opacity="0.5" />
+    </svg>
+  )
+}
+
+const SMALL_WORDS = new Set([
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'but',
+  'of',
+  'for',
+  'on',
+  'in',
+  'with',
+  'to',
+  'at',
+  'by',
+  'vs',
+])
+
+function toTitleCase(input: string): string {
+  const words = input
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 4)
+  if (!words.length) return 'New chat'
+  return words
+    .map((w, i) => (i === 0 || !SMALL_WORDS.has(w) ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(' ')
+}
+
+function generateTitle(raw: string): string {
+  const cleaned = raw.replace(/[^\w\s'.-]/g, ' ').replace(/\s+/g, ' ').trim()
+  const lower = cleaned.toLowerCase()
+  if (!lower) return 'New chat'
+
+  const diff = lower.match(/what(?:'s| is)? the difference between (.+?) and (.+)$/)
+  if (diff) return `${toTitleCase(diff[1])} vs ${toTitleCase(diff[2])}`
+
+  const learn = lower.match(/how do (?:i|you|we) (?:learn|start learning) (.+)$/)
+  if (learn) return `Learning ${toTitleCase(learn[1])}`
+
+  const explain = lower.match(/^(?:please )?explain (.+)$/)
+  if (explain) return toTitleCase(explain[1])
+
+  const create = lower.match(/(?:can you (?:please )?)?(?:help me (?:to )?)?(?:create|make|build|write|generate) (?:a |an |the )?(.+)$/)
+  if (create) return `${toTitleCase(create[1])} Help`
+
+  const give = lower.match(/^(?:please )?(?:give|show|tell|provide|share) me (?:a |an |the )?(.+)$/)
+  if (give) return toTitleCase(give[1])
+
+  const howTo = lower.match(/how to (.+)$/)
+  if (howTo) return toTitleCase(howTo[1])
+
+  const want = lower.match(/^(?:i want to|i need to|i'd like to|i would like to|want to|need to|help me to) (.+)$/)
+  if (want) return toTitleCase(want[1])
+
+  if (lower.match(/^what can (?:i|you|we) do/)) return 'What I Can Do'
+
+  if (lower.match(/^how (?:are|am) (?:i|you|we) doing?/)) return 'How I Am'
+
+  const how = lower.match(/^how (?:do |does |can )?(.+)$/)
+  if (how) return toTitleCase(how[1])
+
+  const what = lower.match(/^(?:what is|what are|what's|what about) (?:the )?(.+)$/)
+  if (what) return toTitleCase(what[1])
+
+  const polite = lower.replace(/^(hi|hello|hey|yo|good morning|good afternoon|good evening|dear|please)\s*[, ]*/, '')
+  const words = polite.split(/\s+/).filter(Boolean)
+  const stop = new Set([
+    'a',
+    'an',
+    'the',
+    'to',
+    'of',
+    'for',
+    'and',
+    'with',
+    'me',
+    'my',
+    'i',
+    'you',
+    'your',
+    'can',
+    'help',
+    'about',
+    'that',
+    'this',
+    'it',
+    'is',
+    'are',
+    'do',
+    'does',
+  ])
+  const meaningful = words.filter((w) => !stop.has(w))
+  return toTitleCase((meaningful.length ? meaningful : words).slice(0, 4).join(' '))
 }
 
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
@@ -164,7 +288,11 @@ export default function App() {
     setChats((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c
-        const title = c.title || (firstText ? firstText.slice(0, 40) : 'New chat')
+        let title = c.title
+        if (!title || title === 'New chat') {
+          const source = firstText ?? nextMessages.find((m) => m.role === 'user')?.text
+          title = source ? generateTitle(source) : 'New chat'
+        }
         return { ...c, title, messages: nextMessages }
       }),
     )
@@ -237,7 +365,9 @@ export default function App() {
               className={`chat-item ${chat.id === activeId ? 'active' : ''}`}
               onClick={() => selectChat(chat.id)}
             >
-              <span className="chat-item-icon">☕</span>
+              <span className="chat-item-icon">
+                  <BrandIcon size={15} />
+                </span>
               <span className="chat-item-title">{chat.title}</span>
               <button
                 className="chat-item-del"
@@ -253,8 +383,10 @@ export default function App() {
           ))}
         </div>
         <div className="sidebar-foot">
-          <span className="cup-mini">☕</span>
-          <span>Brew • your chat history is saved locally</span>
+          <span className="cup-mini">
+              <BrandIcon size={14} />
+            </span>
+          <span>viYa • your chat history is saved locally</span>
         </div>
       </aside>
 
@@ -266,13 +398,17 @@ export default function App() {
             ☰
           </button>
           <div className="avatar-3d">
-            <span className="avatar-cup">☕</span>
+            <span className="avatar-cup">
+              <BrandIcon size={24} />
+            </span>
             <span className="avatar-steam steam-1" />
             <span className="avatar-steam steam-2" />
             <span className="avatar-steam steam-3" />
           </div>
           <div className="header-info">
-            <h1>Brew</h1>
+            <h1>
+              vi<span className="brand-accent">Y</span>a
+            </h1>
             <span className="status">
               <span className="dot" /> Online
             </span>
@@ -285,20 +421,12 @@ export default function App() {
         <main className="chat-body">
           {messages.length === 0 && (
             <div className="welcome">
-              <div className="cup-scene">
-                <span className="steam steam-1" />
-                <span className="steam steam-2" />
-                <span className="steam steam-3" />
-                <div className="cup">
-                  <div className="cup-liquid" />
-                  <div className="cup-face">
-                    <span className="cup-eye left" />
-                    <span className="cup-eye right" />
-                    <span className="cup-mouth">☺</span>
-                  </div>
+              <div className="logo-scene">
+                <div className="logo-ring">
+                  <BrandIcon size={72} />
+                  <span className="logo-spark spark-1" />
+                  <span className="logo-spark spark-2" />
                 </div>
-                <div className="saucer" />
-                <div className="cup-shadow" />
               </div>
               <div className="intro">{INTRO}</div>
               <div className="suggestions">
@@ -312,13 +440,19 @@ export default function App() {
           )}
           {messages.map((msg, i) => (
             <div key={msg.id} className={`message ${msg.role} msg-${i % 4}`}>
-              {msg.role === 'bot' && <span className="bubble-avatar">☕</span>}
+              {msg.role === 'bot' && (
+                <span className="bubble-avatar">
+                  <BrandIcon size={16} />
+                </span>
+              )}
               <div className="bubble">{msg.role === 'bot' ? <FormattedText text={msg.text} /> : msg.text}</div>
             </div>
           ))}
           {typing && (
             <div className="message bot">
-              <span className="bubble-avatar">☕</span>
+              <span className="bubble-avatar">
+                <BrandIcon size={16} />
+              </span>
               <div className="bubble typing">
                 <span></span>
                 <span></span>

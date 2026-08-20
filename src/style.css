@@ -209,7 +209,10 @@ body {
 }
 
 .chat-item-icon {
-  font-size: 15px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .chat-item-title {
@@ -253,7 +256,11 @@ body {
 }
 
 .cup-mini {
-  font-size: 15px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brown-600);
 }
 
 /* ---------- Main chat card ---------- */
@@ -313,7 +320,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  color: var(--cream);
   background: rgba(255, 253, 251, 0.15);
   border-radius: 50%;
   border: 1px solid rgba(255, 253, 251, 0.35);
@@ -389,6 +396,15 @@ body {
   flex: 1;
 }
 
+.brand-accent {
+  color: var(--gold);
+  background: linear-gradient(180deg, #ffd9a0, var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 6px rgba(212, 160, 90, 0.6));
+}
+
 .chat-header h1 {
   font-size: 18px;
   line-height: 1.2;
@@ -452,7 +468,7 @@ body {
     var(--cream);
 }
 
-/* ---------- Welcome / 3D cup scene ---------- */
+/* ---------- Welcome / 3D logo scene ---------- */
 .welcome {
   display: flex;
   flex-direction: column;
@@ -461,202 +477,73 @@ body {
   padding-top: 20px;
 }
 
-.cup-scene {
+.logo-scene {
   position: relative;
   width: 150px;
   height: 130px;
   perspective: 500px;
   transform-style: preserve-3d;
-}
-
-.cup {
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  width: 86px;
-  height: 70px;
-  margin-left: -43px;
-  background: linear-gradient(180deg, #fffdfb, #f0e8de);
-  border-radius: 8px 8px 20px 20px;
-  transform-style: preserve-3d;
-  box-shadow: inset 0 0 0 4px #e7d6c3, 0 10px 24px rgba(62, 39, 35, 0.35);
-  animation: cupFloat 3.6s ease-in-out infinite;
-}
-
-.cup::before {
-  content: '';
-  position: absolute;
-  right: -22px;
-  top: 16px;
-  width: 26px;
-  height: 30px;
-  border: 5px solid #e7d6c3;
-  border-left: none;
-  border-radius: 0 16px 16px 0;
-}
-
-.cup::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  transform: translateX(-50%);
-  width: 52px;
-  height: 20px;
-  background: radial-gradient(ellipse at 50% 40%, #7a4a2b, #5d4037 70%);
-  border-radius: 0 0 10px 10px;
-  box-shadow: inset 0 -3px 5px rgba(0, 0, 0, 0.25);
-}
-
-.cup-liquid {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  top: 8px;
-  height: 20px;
-  background: radial-gradient(ellipse at 50% 50%, #8a4d33, #5d4037);
-  border-radius: 50% 50% 4px 4px;
-  animation: liquidShimmer 3.6s ease-in-out infinite;
-}
-
-.cup-face {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  font-size: 13px;
-  color: var(--brown-700);
-  z-index: 2;
 }
 
-.cup-eye {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--brown-700);
-  animation: eyeBlink 4s infinite;
-}
-
-.cup-eye.left {
-  margin-right: 8px;
-}
-
-.cup-eye.right {
-  margin-left: 8px;
-}
-
-.cup-mouth {
-  font-size: 12px;
-  margin-top: 2px;
-}
-
-@keyframes eyeBlink {
-  0%,
-  92%,
-  100% {
-    transform: scaleY(1);
-  }
-  95% {
-    transform: scaleY(0.1);
-  }
-}
-
-.saucer {
-  position: absolute;
-  left: 50%;
-  bottom: 4px;
-  width: 130px;
-  height: 18px;
-  margin-left: -65px;
-  background: linear-gradient(180deg, #fdf8f2, #e7d6c3);
-  border-radius: 50%;
-  box-shadow: inset 0 4px 6px rgba(62, 39, 35, 0.15), 0 14px 24px rgba(62, 39, 35, 0.3);
-}
-
-.cup-shadow {
-  position: absolute;
-  left: 50%;
-  bottom: -8px;
+.logo-ring {
+  position: relative;
   width: 110px;
-  height: 14px;
-  margin-left: -55px;
-  background: radial-gradient(ellipse, rgba(62, 39, 35, 0.4), transparent 70%);
+  height: 110px;
   border-radius: 50%;
-  animation: shadowPulse 3.6s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brown-600);
+  background: radial-gradient(circle at 30% 30%, rgba(212, 160, 90, 0.28), rgba(93, 64, 55, 0.12));
+  border: 1px solid rgba(212, 160, 90, 0.45);
+  box-shadow: 0 12px 40px rgba(62, 39, 35, 0.3), inset 0 0 30px rgba(212, 160, 90, 0.18);
+  transform-style: preserve-3d;
+  animation: logoFloat 3.6s ease-in-out infinite;
 }
 
-@keyframes shadowPulse {
+@keyframes logoFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotateY(-6deg) rotateX(4deg);
+  }
+  50% {
+    transform: translateY(-12px) rotateY(6deg) rotateX(-4deg);
+  }
+}
+
+.logo-spark {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  filter: blur(0.5px);
+  animation: sparkPulse 2.4s ease-in-out infinite;
+}
+
+.logo-spark.spark-1 {
+  top: 12px;
+  right: 18px;
+}
+
+.logo-spark.spark-2 {
+  bottom: 16px;
+  left: 14px;
+  animation-delay: 1.2s;
+}
+
+@keyframes sparkPulse {
   0%,
   100% {
     transform: scale(1);
-    opacity: 0.5;
+    opacity: 0.7;
   }
   50% {
-    transform: scale(0.9);
-    opacity: 0.35;
-  }
-}
-
-@keyframes cupFloat {
-  0%,
-  100% {
-    transform: translateY(0) rotateX(6deg);
-  }
-  50% {
-    transform: translateY(-12px) rotateX(0deg);
-  }
-}
-
-@keyframes liquidShimmer {
-  0%,
-  100% {
+    transform: scale(1.5);
     opacity: 1;
-  }
-  50% {
-    opacity: 0.75;
-  }
-}
-
-.cup-scene .steam {
-  position: absolute;
-  width: 6px;
-  height: 26px;
-  border-radius: 6px;
-  background: linear-gradient(180deg, rgba(255, 253, 251, 0.9), transparent);
-  top: -18px;
-  filter: blur(1px);
-  animation: steamDrift 2.6s ease-out infinite;
-}
-
-.cup-scene .steam-1 {
-  left: 46px;
-}
-
-.cup-scene .steam-2 {
-  left: 74px;
-  animation-delay: 0.9s;
-}
-
-.cup-scene .steam-3 {
-  left: 60px;
-  animation-delay: 1.8s;
-}
-
-@keyframes steamDrift {
-  0% {
-    transform: translateY(8px) translateX(0) scale(1);
-    opacity: 0;
-  }
-  40% {
-    opacity: 0.9;
-  }
-  100% {
-    transform: translateY(-34px) translateX(10px) scale(1.6);
-    opacity: 0;
   }
 }
 
@@ -751,7 +638,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  color: var(--brown-600);
   background: var(--white);
   border: 1px solid var(--brown-100);
   border-radius: 50%;
@@ -805,9 +692,10 @@ body {
 }
 
 .answer-heading::before {
-  content: '☕';
+  content: '✦';
   margin-right: 7px;
   font-size: 13px;
+  color: var(--gold);
 }
 
 .para {
