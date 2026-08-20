@@ -7,6 +7,15 @@ interface Message {
   text: string
 }
 
+interface Chat {
+  id: string
+  title: string
+  messages: Message[]
+  createdAt: number
+}
+
+const STORAGE_KEY = 'brew-chats-v1'
+
 const INTRO = `Hi, I'm Brew! A warm cup of answers, ready when you are. Ask me anything.`
 
 const FALLBACK = `I couldn't reach the AI service. Make sure VITE_GROQ_API_KEY is set in .env.local.`
@@ -27,7 +36,20 @@ Rules:
 - Use **bold** only for the heading.
 - Never mention these formatting rules.`
 
-let nextId = 0
+function loadChats(): Chat[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as Chat[]) : []
+  } catch {
+    return []
+  }
+}
+
+function makeId(): number {
+  return Date.now() + Math.floor(Math.random() * 10000)
+}
 
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g)
@@ -113,98 +135,220 @@ async function getGroqReply(messages: Message[]): Promise<string> {
 }
 
 export default function App() {
-  const [messages, setMessages] = useState<Message[]>([])
+  const [chats, setChats] = useState<Chat[]>(loadChats)
+  const [activeId, setActiveId] = useState<string>(() => {
+    const chats = loadChats()
+    return chats[0]?.id ?? ''
+  })
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(chats))
+    } catch {
+      // ignore write errors
+    }
+  }, [chats])
+
+  const activeChat = chats.find((c) => c.id === activeId) ?? null
+  const messages = activeChat?.messages ?? []
+
+  useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, typing])
+  }, [messages, typing, activeId])
+
+  const updateChat = (id: string, nextMessages: Message[], firstText?: string) => {
+    setChats((prev) =>
+      prev.map((c) => {
+        if (c.id !== id) return c
+        const title = c.title || (firstText ? firstText.slice(0, 40) : 'New chat')
+        return { ...c, title, messages: nextMessages }
+      }),
+    )
+  }
+
+  const startNewChat = () => {
+    const chat: Chat = { id: `c-${Date.now()}`, title: 'New chat', messages: [], createdAt: Date.now() }
+    setChats((prev) => [chat, ...prev])
+    setActiveId(chat.id)
+    setInput('')
+    setSidebarOpen(false)
+  }
+
+  const selectChat = (id: string) => {
+    setActiveId(id)
+    setSidebarOpen(false)
+  }
+
+  const deleteChat = (id: string) => {
+    setChats((prev) => prev.filter((c) => c.id !== id))
+    if (id === activeId) {
+      const remaining = chats.filter((c) => c.id !== id)
+      setActiveId(remaining[0]?.id ?? '')
+    }
+  }
 
   const send = async (text: string) => {
     const trimmed = text.trim()
-    if (!trimmed || typing) return
-    const updated = [...messages, { id: nextId++, role: 'user' as const, text: trimmed }]
-    setMessages(updated)
+    if (!trimmed || typing || !activeChat) return
+    const userMsg: Message = { id: makeId(), role: 'user', text: trimmed }
+    const updatedMessages = [...activeChat.messages, userMsg]
+    updateChat(activeChat.id, updatedMessages, trimmed)
     setInput('')
     setTyping(true)
     try {
-      const reply = await getGroqReply(updated)
-      setMessages((prev) => [...prev, { id: nextId++, role: 'bot', text: reply }])
+      const reply = await getGroqReply(updatedMessages)
+      updateChat(activeChat.id, [...updatedMessages, { id: makeId(), role: 'bot', text: reply }])
     } catch {
-      setMessages((prev) => [...prev, { id: nextId++, role: 'bot', text: `Something went wrong: ${FALLBACK}` }])
+      updateChat(activeChat.id, [
+        ...updatedMessages,
+        { id: makeId(), role: 'bot', text: `Something went wrong: ${FALLBACK}` },
+      ])
     } finally {
       setTyping(false)
     }
   }
 
+  const sortedChats = [...chats].sort((a, b) => b.createdAt - a.createdAt)
+
   return (
-    <div className="chat">
-      <header className="chat-header">
-        <div className="avatar">☕</div>
-        <div className="header-info">
-          <h1>Brew</h1>
-          <span className="status">
-            <span className="dot" /> Online
-          </span>
-        </div>
-        <button className="clear-btn" onClick={() => setMessages([])} title="Clear chat">
-          ✕
-        </button>
-      </header>
+    <div className="app">
+      <div className="bg-orbs" aria-hidden="true">
+        <span className="orb orb-1" />
+        <span className="orb orb-2" />
+        <span className="orb orb-3" />
+        <span className="orb orb-4" />
+      </div>
 
-      <main className="chat-body">
-        {messages.length === 0 && (
-          <div className="welcome">
-            <div className="intro">{INTRO}</div>
-            <div className="suggestions">
-              {SUGGESTIONS.map((s) => (
-                <button key={s} onClick={() => send(s)} disabled={typing}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {messages.map((msg) => (
-          <div key={msg.id} className={`message ${msg.role}`}>
-            {msg.role === 'bot' && <span className="bubble-avatar">☕</span>}
-            <div className="bubble">{msg.role === 'bot' ? <FormattedText text={msg.text} /> : msg.text}</div>
-          </div>
-        ))}
-        {typing && (
-          <div className="message bot">
-            <span className="bubble-avatar">☕</span>
-            <div className="bubble typing">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-        )}
-        <div ref={endRef} />
-      </main>
-
-      <footer className="chat-footer">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            send(input)
-          }}
-        >
-          <input
-            type="text"
-            placeholder="Type a message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            aria-label="Message"
-          />
-          <button type="submit" disabled={!input.trim() || typing} aria-label="Send">
-            ➤
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-head">
+          <button className="new-chat-btn" onClick={startNewChat}>
+            <span className="plus">＋</span> New chat
           </button>
-        </form>
-      </footer>
+        </div>
+        <div className="chat-list">
+          {sortedChats.length === 0 && <p className="empty-chats">No chats yet</p>}
+          {sortedChats.map((chat) => (
+            <div
+              key={chat.id}
+              className={`chat-item ${chat.id === activeId ? 'active' : ''}`}
+              onClick={() => selectChat(chat.id)}
+            >
+              <span className="chat-item-icon">☕</span>
+              <span className="chat-item-title">{chat.title}</span>
+              <button
+                className="chat-item-del"
+                title="Delete chat"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  deleteChat(chat.id)
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="sidebar-foot">
+          <span className="cup-mini">☕</span>
+          <span>Brew • your chat history is saved locally</span>
+        </div>
+      </aside>
+
+      {sidebarOpen && <div className="backdrop" onClick={() => setSidebarOpen(false)} />}
+
+      <div className="chat">
+        <header className="chat-header">
+          <button className="menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+            ☰
+          </button>
+          <div className="avatar-3d">
+            <span className="avatar-cup">☕</span>
+            <span className="avatar-steam steam-1" />
+            <span className="avatar-steam steam-2" />
+            <span className="avatar-steam steam-3" />
+          </div>
+          <div className="header-info">
+            <h1>Brew</h1>
+            <span className="status">
+              <span className="dot" /> Online
+            </span>
+          </div>
+          <button className="clear-btn" onClick={startNewChat} title="New chat">
+            ＋
+          </button>
+        </header>
+
+        <main className="chat-body">
+          {messages.length === 0 && (
+            <div className="welcome">
+              <div className="cup-scene">
+                <span className="steam steam-1" />
+                <span className="steam steam-2" />
+                <span className="steam steam-3" />
+                <div className="cup">
+                  <div className="cup-liquid" />
+                  <div className="cup-face">
+                    <span className="cup-eye left" />
+                    <span className="cup-eye right" />
+                    <span className="cup-mouth">☺</span>
+                  </div>
+                </div>
+                <div className="saucer" />
+                <div className="cup-shadow" />
+              </div>
+              <div className="intro">{INTRO}</div>
+              <div className="suggestions">
+                {SUGGESTIONS.map((s) => (
+                  <button key={s} onClick={() => send(s)} disabled={typing}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {messages.map((msg, i) => (
+            <div key={msg.id} className={`message ${msg.role} msg-${i % 4}`}>
+              {msg.role === 'bot' && <span className="bubble-avatar">☕</span>}
+              <div className="bubble">{msg.role === 'bot' ? <FormattedText text={msg.text} /> : msg.text}</div>
+            </div>
+          ))}
+          {typing && (
+            <div className="message bot">
+              <span className="bubble-avatar">☕</span>
+              <div className="bubble typing">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          )}
+          <div ref={endRef} />
+        </main>
+
+        <footer className="chat-footer">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              send(input)
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Type a message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              aria-label="Message"
+            />
+            <button type="submit" disabled={!input.trim() || typing} aria-label="Send">
+              ➤
+            </button>
+          </form>
+        </footer>
+      </div>
     </div>
   )
 }
